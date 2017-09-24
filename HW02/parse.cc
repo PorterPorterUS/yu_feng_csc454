@@ -7,21 +7,66 @@ void myParse::error () {
     exit (1);
 }
 
-void myParse::match (token expected) {
+string myParse::match (token expected) {
+    string token = "";
     if (input_token == expected) {
         cout << "matched " << names[input_token];
+        token = names[input_token];
         if (input_token == t_id || input_token == t_literal) {
             cout << ": " << myScan::get_token_image();
+            token = "\"" + myScan::get_token_image() + "\"";
         }
         cout << endl;
         input_token = myScan::scan();
     }
     else error();
+    return token;
+}
+
+void myParse::addIndent() {
+    for (int i = 0; i < indentation; i++) {
+        output_string += "  ";
+    }
+}
+
+void myParse::addSpace() {
+    output_string += " ";
+}
+
+void myParse::addReturn() {
+    output_string += "\n";
+    addIndent();
+}
+
+void printTree(treeNode *t) {
+    if (t != nullptr) {
+        cout << (*t).value;
+        if ((*t).left != nullptr) {
+            cout << " ";
+            printTree((*t).left);
+        }
+        if ((*t).right != nullptr) {
+            cout << " ";
+            printTree((*t).right);
+        }
+        if (((*t).value.find("do") != string::npos) ||
+            ((*t).value.find("if") != string::npos)) {
+            cout << "\n ";
+        }
+        if ((*t).value.front() == '(') {
+            cout << ")";
+        }
+        
+        if ((*t).value.find('[') != string::npos) {
+            cout << "\n ]";
+        }
+    }
 }
 
 
-
 void myParse::program () {
+    indentation = 0;
+    root = new treeNode("(program\n[", nullptr, nullptr);
     switch (input_token) {
         case t_id:
         case t_read:
@@ -31,14 +76,15 @@ void myParse::program () {
         case t_do:
         case t_check:
             cout << "predict program --> stmt_list eof" << endl;
-            stmt_list();
+            (*root).left = stmt_list();
             match (t_eof);
             break;
         default: error ();
     }
 }
 
-void myParse::stmt_list () {
+treeNode* myParse::stmt_list () {
+    treeNode* sl = new treeNode("\n", nullptr, nullptr);
     switch (input_token) {
         case t_id:
         case t_read:
@@ -47,86 +93,95 @@ void myParse::stmt_list () {
         case t_do:
         case t_check:
             cout << "predict stmt_list --> stmt stmt_list" << endl;
-            stmt ();
-            stmt_list ();
+            (*sl).left = stmt ();
+            (*sl).right = stmt_list ();
             break;
         /* set<string> SL = {"$$", "od", "fi"}; */
         case t_eof:
         case t_od:
         case t_fi:
             cout << "predict stmt_list --> epsilon" << endl;
+            delete sl;
+            sl = nullptr;
             break;          /*  epsilon production */
         default: error ();
     }
+    return sl;
 }
 
-void myParse::stmt () {
+treeNode* myParse::stmt () {
+    treeNode* s = new treeNode("(", nullptr, nullptr);
     switch (input_token) {
         case t_id:
             cout << "predict stmt --> id gets expr" << endl;
-            match (t_id);
-            match (t_gets);
-            expr ();
+            (*s).left = new treeNode(match(t_id), nullptr, nullptr);
+            
+            (*s).value += match(t_gets);
+            (*s).right = expr();
             break;
         case t_read:
             cout << "predict stmt --> read id" << endl;
-            match (t_read);
-            match (t_id);
+            (*s).value += match(t_read);
+            (*s).value += " " + match(t_id);
             break;
         case t_write:
             cout << "predict stmt --> write relat" << endl;
-            match(t_write);
-            expr();
+            (*s).value += match(t_write);
+            (*s).right = expr();
             break;
         case t_if:
             cout << "predict stmt --> if relat stmt_list fi" << endl;
-             match (t_if);
-            relat();
-            stmt_list();
+            (*s).value += match (t_if) + "\n";
+            (*s).left = relat();
+            (*(*s).left).value.insert(0, "(");
+            (*s).right = stmt_list();
             match(t_fi);
             break;
         case t_do:
             cout << "predict stmt --> do stmt_list od" << endl;
-            match(t_do);
-            stmt_list();
+            (*s).value += match(t_do) + "\n  [";
+            (*s).left = stmt_list();
             match(t_od);
             break;
         case t_check:
             cout << "predict stmt --> check relat" << endl;
-            match(t_check);
-            relat();
+            (*s).value += match(t_check);
+            (*s).left = relat();
             break;
         default: error ();
     }
+    return s;
 }
 
-void myParse::relat() {
+treeNode* myParse::relat() {
+    treeNode* r = new treeNode("", nullptr, nullptr);
     switch (input_token) {
         case t_id:
         case t_literal:
         case t_lparen:
             cout << "predict relat --> expr expr_tail" << endl;
-            expr ();
-            expr_tail ();
+            (*r).left = expr();
+            r = expr_tail(r);
             break;
         default: error ();
     }
+    return r;
 }
 
-void myParse::expr () {
+treeNode* myParse::expr () {
     switch (input_token) {
         case t_id:
         case t_literal:
         case t_lparen:
             cout << "predict expr --> term term_tail" << endl;
-            term ();
-            term_tail ();
+            return term_tail(term());
             break;
         default: error ();
     }
+    return nullptr;
 }
 
-void myParse::expr_tail () {
+treeNode* myParse::expr_tail(treeNode *r) {
     switch (input_token) {
         case t_equal:
         case t_comp:
@@ -135,12 +190,11 @@ void myParse::expr_tail () {
         case t_lequal:
         case t_gequal:
             cout << "predict expr_tail --> ro_op expr" << endl;
-            ro_op();
-            expr();
+            (*r).value = ro_op();
+            (*r).right = expr();
             break;
-            
-/* FOLLOW set  --> set<string> ET = {")", "fi", "$$",
-             "id", "read", "write", "do", "check"};  */
+/* FOLLOW set  --> set<string> ET = {")", "fi". "if", "$$",
+             "id", "read", "write", "do", "od", "check"};  */
         case t_rparen:
         case t_fi:
         case t_if:
@@ -155,35 +209,33 @@ void myParse::expr_tail () {
             break;          /*  epsilon production */
         default: myParse::error ();
     }
+    return r;
 }
 
-void myParse::term () {
+treeNode* myParse::term() {
     switch (input_token) {
         case t_id:
         case t_literal:
         case t_lparen:
             cout << "predict term --> factor factor_tail" << endl;
-            factor ();
-            factor_tail ();
-            break;
-        default: myParse::error ();
+            return factor_tail(factor());
+        default: myParse::error();
     }
+    return nullptr;
 }
 
-void myParse::term_tail () {
+treeNode* myParse::term_tail(treeNode *t) {
     /* predict_map["TT_AO"] = {"+", "-"}; */
     switch (input_token) {
         case t_add:
-        case t_sub:
+        case t_sub: {
             cout << "predict term_tail --> add_op term term_tail" << endl;
-            add_op();
-            term();
-            term_tail();
-            break;
-            
-/* FOLLOW set  --> set<string> TT = {")", "fi", "$$",
+            treeNode* tt = new treeNode(("(" + add_op()), t, term());
+            return term_tail(tt);
+        }
+/* FOLLOW set  --> set<string> TT = {")", "fi" , "if", "$$",
              "==", "<>", ">", "<", "<=", ">=",
-             "id", "read", "write", "do", "check"};*/
+             "id", "read", "write", "do", "od", "check"};*/
         case t_rparen:
         case t_fi:
         case t_if:
@@ -204,41 +256,46 @@ void myParse::term_tail () {
             break;          /*  epsilon production */
         default: myParse::error ();
     }
+    return t;
 }
 
-void myParse::factor () {
+treeNode* myParse::factor () {
     switch (input_token) {
-        case t_id:
+        case t_id: {
             cout << "predict factor --> id" << endl;
-            match (t_id);
-            break;
-        case t_literal:
-            cout << "predict factor --> literal" << endl;
-            match (t_literal);
-            break;
-        case t_lparen:
-            cout << "predict factor --> lparen expr rparen" << endl;
+            return new treeNode( ("(id " + match(t_id)),
+                                nullptr, nullptr);
+        }
+        case t_literal: {
+            cout << "predict factor --> num" << endl;
+            return new treeNode("(num " + match(t_literal), nullptr, nullptr);
+        }
+        case t_lparen: {
+            cout << "predict factor --> ( expr )" << endl;
+            treeNode* f;
             match (t_lparen);
-            relat();
+            f = relat();
+            (*f).value.insert(0, "(");
             match (t_rparen);
-            break;
+            return f;
+        }
         default: error ();
     }
+    return nullptr;
 }
 
-void myParse::factor_tail () {
+treeNode* myParse::factor_tail(treeNode* f) {
     switch (input_token) {
         case t_mul:
-        case t_div:
+        case t_div: {
             cout <<"predict factor_tail --> mul_op factor factor_tail"
                 << endl;
-            mul_op ();
-            factor ();
-            factor_tail ();
-            break;
+            treeNode* t = new treeNode(("("+mul_op()), f, factor());
+            return factor_tail(t);
+        }
 /* FOLLOW set --> set<string> FT = {")", "fi", "$$", "+", "-",
              "==", "<>", ">", "<", "<=", ">=",
-             "id", "read", "write", "do", "check"};*/
+             "id", "read", "write", "do", "od", "check"};*/
         case t_rparen:
         case t_fi:
         case t_if:
@@ -261,73 +318,80 @@ void myParse::factor_tail () {
             break;          /*  epsilon production */
         default: error ();
     }
+    return f;
 }
 
-void myParse::add_op () {
+string myParse::add_op () {
     switch (input_token) {
-        case t_add:
+        case t_add: {
             cout << "predict add_op --> add" << endl;
-            match (t_add);
-            break;
-        case t_sub:
+            return match (t_add);
+        }
+        case t_sub: {
             cout << "predict add_op --> sub" << endl;
-            match (t_sub);
-            break;
+            return match (t_sub);
+        }
         default: error ();
     }
+    return nullptr;
 }
 
-void myParse::mul_op () {
+string myParse::mul_op () {
     switch (input_token) {
-        case t_mul:
+        case t_mul: {
             cout << "predict mul_op --> mul" << endl;
-            match (t_mul);
-            break;
-        case t_div:
+            return match(t_mul);
+        }
+        case t_div: {
             cout << "predict mul_op --> div" << endl;
-            match (t_div);
-            break;
-        default: error ();
+            return match(t_div);
+        }
+        default: error();
     }
+    return nullptr;
 }
 
-void myParse::ro_op () {
+string myParse::ro_op () {
     switch (input_token) {
-        case t_equal:
-            cout << "predict mul_op --> mul" << endl;
-            match (t_equal);
-            break;
-        case t_comp:
-            cout << "predict mul_op --> div" << endl;
-            match (t_comp);
-            break;
-        case t_greater:
-            cout << "predict mul_op --> mul" << endl;
-            match (t_greater);
-            break;
-        case t_less:
-            cout << "predict mul_op --> div" << endl;
-            match (t_less);
-            break;
-        case t_lequal:
-            cout << "predict mul_op --> mul" << endl;
-            match (t_lequal);
-            break;
-        case t_gequal:
-            cout << "predict mul_op --> div" << endl;
-            match (t_gequal);
-            break;
-        default: error ();
+        case t_equal: {
+            cout << "predict ro_op --> ==" << endl;
+            return match(t_equal);
+        }
+        case t_comp: {
+            cout << "predict ro_op --> <>" << endl;
+            return match(t_comp);
+        }
+        case t_greater: {
+            cout << "predict ro_op --> >" << endl;
+            return match(t_greater);
+        }
+        case t_less: {
+            cout << "predict ro_op --> <" << endl;
+            return match(t_less);
+        }
+        case t_lequal: {
+            cout << "predict ro_op --> >=" << endl;
+            return match(t_lequal);
+        }
+        case t_gequal: {
+            cout << "predict ro_op --> <=" << endl;
+            return match(t_gequal);
+        }
+        default: error();
     }
+    return nullptr;
 }
 
 int myParse::main () {
-    // init();
     input_token = myScan::scan();
     program ();
+    cout << "\n\n***************************************\n\n";
+    printTree(root);
     return 0;
 }
 
+
+/* the following code is only to generate the FIRST and FOLLOW sets and PREDICT sets. */
 void myParse::init() {
     init_first();
     init_follow();
@@ -386,30 +450,30 @@ void myParse::init_follow() {
                     "==", "<>", ">", "<", "<=", ">=",
                 "id", "read", "write", "do", "check"};
     follow_map["F"] = F;
-    set<string> FT = {")", "fi", "$$", "+", "-",
+    set<string> FT = {")", "fi" , "if", "$$", "+", "-",
                     "==", "<>", ">", "<", "<=", ">=",
-                    "id", "read", "write", "do", "check"};
+                    "id", "read", "write", "do", "od", "check"};
     follow_map["FT"] = FT;
     
-    set<string> T = {")", "fi", "$$", "+", "-",
+    set<string> T = {")", "fi", "if", "$$", "+", "-",
             "==", "<>", ">", "<", "<=", ">=",
-            "id", "read", "write", "do", "check"};
+            "id", "read", "write", "do", "od", "check"};
     follow_map["T"] = T;
-    set<string> TT = {")", "fi", "$$",
+    set<string> TT = {")", "fi", "fi", "$$",
             "==", "<>", ">", "<", "<=", ">=",
-            "id", "read", "write", "do", "check"};
+            "id", "read", "write", "do", "od", "check"};
     follow_map["TT"] = TT;
     
-    set<string> E = {")", "fi", "$$",
+    set<string> E = {")", "fi", "if", "$$",
             "==", "<>", ">", "<", "<=", ">=",
-            "id", "read", "write", "do", "check"};
+            "id", "read", "write", "do", "od", "check"};
     follow_map["E"] = E;
-    set<string> ET = {")", "fi", "$$",
-            "id", "read", "write", "do", "check"};
+    set<string> ET = {")", "fi", "if", "$$",
+            "id", "read", "write", "do", "od", "check"};
     follow_map["ET"] = ET;
     
-    set<string> R = {")", "fi", "$$",
-        "id", "read", "write", "do", "check"};
+    set<string> R = {")", "fi", "if", "$$",
+        "id", "read", "write", "do", "od", "check"};
     follow_map["R"] = R;
 }
 

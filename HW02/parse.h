@@ -7,18 +7,33 @@
 
 using namespace std;
 
-const string names[] = {"read", "write", "id", "lit", ":=",
-    "add", "sub", "mul", "div", "lparen", "rparen", "eof",
-    "if", "fi", "do", "od", "check", "==", "<>", "<",
-    ">", "<=", ">="
+const string names[] = {"read", "write", "id", "num", ":=",
+            "+", "-", "*", "/", "(", ")", "eof",
+            "if", "fi", "do", "od", "check", "==", "<>", "<",
+            ">", "<=", ">="
+};
+
+class treeNode {
+public:
+    treeNode(string v, treeNode* l, treeNode* r) {
+        value = v;
+        left = l;
+        right = r;
+    }
+    string value;
+    treeNode* left;
+    treeNode* right;
 };
 
 static token input_token;
 static map<string, set<string>>first_map;
 static map<string, set<string>> follow_map;
 static set<string> eps = {"SL", "ET", "TT", "FT"};
-
 static map<string, set<string>> predict_map;
+
+static treeNode* root ;
+static int indentation;
+static string output_string;
 
 class myParse
 {
@@ -29,27 +44,32 @@ public:
     static int main();
 
 private:
-    static void program();
-    static void stmt_list();
-    static void stmt();
-    static void relat();
-    static void expr();
-    static void expr_tail();
-    static void term();
-    static void term_tail();
-    static void factor();
-    static void factor_tail();
-    static void add_op();
-    static void mul_op();
-    static void ro_op();
 
+    static void program();
+    static treeNode* stmt_list();
+    static treeNode* stmt();
+    static treeNode* relat();
+    static treeNode* expr();
+    static treeNode* expr_tail(treeNode *r);
+    static treeNode* term();
+    static treeNode* term_tail(treeNode *e);
+    static treeNode* factor();
+    static treeNode* factor_tail(treeNode *t);
+    static string add_op();
+    static string mul_op();
+    static string ro_op();
+
+    static void addIndent();
+    static void addSpace();
+    static void addReturn();
+    
     static void error();
     static void init();
     static void init_first();
     static void init_follow();
     static void init_predict();
     
-    static void match(token expected);
+    static string match(token expected);
     
 };
 
