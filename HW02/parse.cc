@@ -334,11 +334,11 @@ treeNode* myParse::expr(set<string> f_set) {
             case t_id:
             case t_literal:
                 if (ifDebug) cout << "predict expr --> term term_tail" << endl;
-                return term_tail(term(f_set), f_set);
+                return term_tail(term(follow_map["T"]), f_set);
                 break;
             case t_lparen:
                 if (ifDebug) cout << "predict expr --> (term term_tail)" << endl;
-                return term_tail(term(f_set), {")"});
+                return term_tail(term(follow_map["T"]), {")"});
                 break;
             default: error (); throw "error from expr !!";
         }
@@ -603,8 +603,9 @@ int myParse::main (bool debug) {
     ifDebug = debug;
     input_token = (*scanner).scan();
     program ();
-    cout << "\n\n********** PROGRAM OUTPUT **************\n\n";
+    
     if (!isError) {
+        cout << "\n\n********** PROGRAM OUTPUT **************\n\n";
         printTree(root);
     }
     cout << "\n\n********** OUTPUT END **************\n\n";
