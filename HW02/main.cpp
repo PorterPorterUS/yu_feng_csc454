@@ -12,6 +12,7 @@
 
 
 int main(int argc, const char * argv[]) {
-    myParse::main();
+    myParse* parser = new myParse();
+    (*parser).main(true);
     return 0;
 }

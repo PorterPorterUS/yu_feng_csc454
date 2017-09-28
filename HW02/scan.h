@@ -13,17 +13,21 @@ enum token {t_read, t_write, t_id, t_literal, t_gets,
     t_greater, t_lequal, t_gequal
 };
 
-static string token_image;
-static char c;
-
 class myScan
 {
 public:
-    myScan();
-    ~myScan();
-    static token scan();
-    static const string get_token_image();
+    myScan() {};
+    ~myScan() {};
+     token scan();
+     const string get_token_image();
+     void ckeckCharAndError(bool msg);
     
+private:
+    string token_image = "";
+    char c;
+    int line = 1;
+    int col = 0;
+    string curr_line = "";
 };
 
 

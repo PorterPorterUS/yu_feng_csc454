@@ -1,5 +1,29 @@
 #include "scan.h"
 
+
+void myScan::ckeckCharAndError(bool msg) {
+    static string prev_line;
+    if (msg) {
+        cerr << "syntax error:: "<< "at line: " << line << ", col: " << col;
+        if (curr_line.length() == 0) {
+            cerr << "; please check \"" << prev_line << "\" <- here." << endl;
+        } else {
+            cerr << "; please check \"" << curr_line << "\" <- here." << endl;
+        }
+        
+    } else {
+        if (c == '\n') {
+            line += 1;
+            col = 0;
+            prev_line = curr_line;
+            curr_line = "";
+        } else {
+            col += 1;
+            curr_line += c;
+        }
+    }
+}
+
 const string myScan::get_token_image() {
     return token_image;
 }
@@ -10,6 +34,7 @@ token myScan::scan() {
 
     while (isspace(c)) {
         cin.get(c);
+        ckeckCharAndError(false);
     }
     if (c == char_traits<char>::eof()) {
         return t_eof;
@@ -17,12 +42,12 @@ token myScan::scan() {
     if (c == '$') {
         token_image += c;
         cin.get(c);
+        ckeckCharAndError(false);
         if (c == '$') {
             token_image += c;
-            cout << "scanner get \"" << token_image << "\"" << endl;
             return t_eof;
         } else {
-            cerr << "error" << endl;
+            ckeckCharAndError(true);
             exit(1);
         }
     }
@@ -31,8 +56,8 @@ token myScan::scan() {
         do {
             token_image += c;
             cin.get(c);
+            ckeckCharAndError(false);
         } while (isalpha(c) || isdigit(c) || c == '_');
-        cout << "scanner get \"" << token_image << "\"" << endl;
         if (token_image.compare("read") == 0) {
             return t_read;
         } else if (token_image.compare("write") == 0) {
@@ -54,40 +79,44 @@ token myScan::scan() {
         do {
             token_image += c;
             cin.get(c);
+            ckeckCharAndError(false);
         } while (isdigit(c));
         return t_literal;
     } else {
         switch(c) {
             case ':': {
-            cin.get(c);
-            if (c != '=') {
-                    cerr << "error" << endl;
-                    exit(1);
+                cin.get(c);
+                ckeckCharAndError(false);
+                if (c != '=') {
+                    ckeckCharAndError(true);
+                    exit (1);
                 } else {
                     cin.get(c);
+                    ckeckCharAndError(false);
                     return t_gets;
                 }
                 break;
             }  
             case '+': 
-                cin.get(c); return t_add;
+                cin.get(c); ckeckCharAndError(false); return t_add;
             case '-': 
-                cin.get(c); return t_sub;
+                cin.get(c); ckeckCharAndError(false); return t_sub;
             case '*': 
-                cin.get(c); return t_mul;
+                cin.get(c); ckeckCharAndError(false); return t_mul;
             case '/': 
-                cin.get(c); return t_div;
+                cin.get(c); ckeckCharAndError(false); return t_div;
             case '(': 
-                cin.get(c); return t_lparen;
+                cin.get(c); ckeckCharAndError(false); return t_lparen;
             case ')': 
-                cin.get(c); return t_rparen;
+                cin.get(c); ckeckCharAndError(false); return t_rparen;
             case '=':
                 cin.get(c);
                 if (c != '=') {
-                    cerr << "error" << endl;
+                    ckeckCharAndError(true);
                     exit(1);
                 } else {
                     cin.get(c);
+                    ckeckCharAndError(false);
                     return t_equal;
                 }
                 break;
@@ -95,34 +124,36 @@ token myScan::scan() {
                 cin.get(c);
                 switch (c) {
                     case '>':
-                        cin.get(c); return t_comp;
+                        cin.get(c); ckeckCharAndError(false); return t_comp;
                     case '=':
-                        cin.get(c); return t_lequal;
+                        cin.get(c); ckeckCharAndError(false); return t_lequal;
                     default:
                         if (isspace(c)) {
+                            ckeckCharAndError(false);
                             return t_less;
                         } else {
-                            cerr << "error" << endl;
+                            ckeckCharAndError(true);
                             exit(1);
                         }
                         break;
                 }
             case '>':
                 cin.get(c);
+                ckeckCharAndError(false);
                 switch (c) {
                     case '=':
-                        cin.get(c); return t_gequal;
+                        cin.get(c); ckeckCharAndError(false); return t_gequal;
                     default:
                         if (isspace(c)) {
                             return t_greater;
                         } else {
-                            cerr << "error" << endl;
+                            ckeckCharAndError(true);
                             exit(1);
                         }
                         break;
                 }
             default:
-            cerr << "error" << endl;
+            ckeckCharAndError(true);
             exit(-1);
         }
     }
