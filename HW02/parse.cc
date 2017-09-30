@@ -167,6 +167,9 @@ treeNode* myParse::stmt_list(set<string> f_set) {
     return sl;
 }
 
+/*
+ stmt: switch the input_token to handle different statements.
+ */
 treeNode* myParse::stmt() {
     treeNode* s = new treeNode("(", nullptr, nullptr);
     try {
@@ -237,11 +240,11 @@ treeNode* myParse::stmt() {
  */
 treeNode* myParse::relat(set<string> f_set) {
     treeNode* r = new treeNode("", nullptr, nullptr);
-    set<string> tmp (f_set);
-    string cmp[] = {"==", "<>", ">", "<", "<=", ">="};
     /*
      based on the f_set, build a context-specific f_set for expr();
      */
+    set<string> tmp (f_set);
+    string cmp[] = {"==", "<>", ">", "<", "<=", ">="};
     tmp.insert(cmp, cmp + 6);
     try {
         switch (input_token) {
@@ -286,7 +289,7 @@ treeNode* myParse::relat(set<string> f_set) {
                  in the try-catch, only pass the {")"} in the follow set to TT and FT.
                  */
                 try {
-                    r = expr_tail(r, {")"});
+                    r = expr_tail(r, f_set);
                 } catch (const char * err_msg) {
                     cerr << "catch error at relation: " << err_msg << endl;
                     while (first_map["ET"].find(names[input_token]) == first_map["ET"].end()
@@ -328,22 +331,27 @@ treeNode* myParse::relat(set<string> f_set) {
  parsing expersion. the parameter is used only for passing to the FT and TT.
  */
 treeNode* myParse::expr(set<string> f_set) {
+    /*
+     based on the f_set, build a context-specific f_set for term();
+     it is basically added {"==", "<>", ">", "<", "<=", ">=", "+", "-"}
+     to f_set and make it be a "context-specific" f_set for term.
+     */
+    set<string> tmp (f_set);
+    string cmp[] = {"==", "<>", ">", "<", "<=", ">=", "+", "-"};
+    tmp.insert(cmp, cmp + 8);
     static token prev_token = input_token;
     try {
         switch (input_token) {
             case t_id:
             case t_literal:
-                if (ifDebug) cout << "predict expr --> term term_tail" << endl;
-                return term_tail(term(follow_map["T"]), f_set);
-                break;
             case t_lparen:
-                if (ifDebug) cout << "predict expr --> (term term_tail)" << endl;
-                return term_tail(term(follow_map["T"]), {")"});
+                if (ifDebug) cout << "predict expr --> term term_tail" << endl;
+                return term_tail(term(tmp), tmp);
                 break;
             default: error (); throw "error from expr !!";
         }
     } catch (const char *err_msg) {
-        if (ifDebug) cout << "catch error at expr: " << err_msg << endl;
+        cout << "catch error at expr: " << err_msg << endl;
         /*
          here using the follow set to check if the next token is in the follow set.
          otherwise start the expression parsing again.
@@ -429,6 +437,11 @@ treeNode* myParse::term(set<string> f_set) {
     return nullptr;
 }
 
+/*
+ term-tail: pass a tree node for the preceeding "term" and set it
+ as a child if the term_tail is not null.
+ f_set is the passing set to add context specific constraint.
+ */
 treeNode* myParse::term_tail(treeNode *t, set<string> f_set) {
     /* predict_map["TT_AO"] = {"+", "-"}; */
     switch (input_token) {
@@ -438,9 +451,11 @@ treeNode* myParse::term_tail(treeNode *t, set<string> f_set) {
             treeNode* tt = new treeNode(("(" + add_op()), t, term(f_set));
             return term_tail(tt, f_set);
         }
-/* FOLLOW set  --> set<string> TT = {")", "fi" , "if", "$$",
+            /* FOLLOW set  --> set<string> TT =
+             {")", "fi" , "if", "$$",
              "==", "<>", ">", "<", "<=", ">=",
-             "id", "read", "write", "do", "od", "check"};*/
+             "id", "read", "write", "do", "od", "check"};
+             */
         case t_rparen:
         case t_fi:
         case t_if:
@@ -469,6 +484,10 @@ treeNode* myParse::term_tail(treeNode *t, set<string> f_set) {
     return t;
 }
 
+/*
+ factor parser: this stage is independent, you don't need to consider
+ context-specific situation here.
+ */
 treeNode* myParse::factor () {
     switch (input_token) {
         case t_id: {
@@ -494,6 +513,10 @@ treeNode* myParse::factor () {
     return nullptr;
 }
 
+/*
+ parser for factor tail stage. It pass the f_set to add
+ context-specific feature.
+ */
 treeNode* myParse::factor_tail(treeNode* f, set<string> f_set) {
     switch (input_token) {
         case t_mul:
@@ -501,9 +524,9 @@ treeNode* myParse::factor_tail(treeNode* f, set<string> f_set) {
             if (ifDebug) cout <<"predict factor_tail --> mul_op factor factor_tail"
                 << endl;
             treeNode* t = new treeNode(("("+mul_op()), f, factor());
-            return factor_tail(t, f_set);
+            return factor_tail(t,  f_set);
         }
-/* FOLLOW set --> set<string> FT = {")", "fi", "$$", "+", "-",
+            /* FOLLOW set --> set<string> FT = {")", "fi", "$$", "+", "-",
              "==", "<>", ">", "<", "<=", ">=",
              "id", "read", "write", "do", "od", "check"};*/
         case t_rparen:
@@ -535,7 +558,9 @@ treeNode* myParse::factor_tail(treeNode* f, set<string> f_set) {
     }
     return f;
 }
-
+/*
+ the add-operator parser.
+ */
 string myParse::add_op () {
     switch (input_token) {
         case t_add: {
@@ -551,6 +576,9 @@ string myParse::add_op () {
     return nullptr;
 }
 
+/*
+ the multi-operator parser.
+ */
 string myParse::mul_op () {
     switch (input_token) {
         case t_mul: {
@@ -566,6 +594,9 @@ string myParse::mul_op () {
     return nullptr;
 }
 
+/*
+ ro_op: the relation operation parser.
+ */
 string myParse::ro_op () {
     switch (input_token) {
         case t_equal: {
@@ -597,6 +628,9 @@ string myParse::ro_op () {
     return nullptr;
 }
 
+/*
+ the main function being called by main.class.
+ */
 int myParse::main (bool debug) {
     isError = false;
     init();
@@ -605,14 +639,192 @@ int myParse::main (bool debug) {
     program ();
     
     if (!isError) {
-        cout << "\n\n********** PROGRAM OUTPUT **************\n\n";
+        cout << "\n\n************* PROGRAM OUTPUT **************\n\n";
         printTree(root);
+        cout << "\n\n************* OUTPUT END **************\n\n";
+        run();
     }
-    cout << "\n\n********** OUTPUT END **************\n\n";
+    
+    
+    
     return 0;
 }
 
 
+/*
+ following code is the excute unit.
+ */
+
+void myParse::run() {
+    execute(root);
+}
+
+int myParse::execute(treeNode* t) {
+    if (t != nullptr) {
+        string val = (*t).value;
+        if (contains(val, ":=")) {
+            exec_assign(t);
+            return t_True;
+        } else if (contains(val, "read")) {
+            regex pattern ("^.*read \"(.*)\"$");
+            smatch sm;
+            regex_match (val, sm, pattern);
+            string tmp_id = sm[1];
+            cout << "\nPlease enter a positive number :";
+            int tmp_int;
+            cin >> tmp_int;
+            cout << endl;
+            val_map[tmp_id] = tmp_int;
+            return t_True;
+        } else if (contains(val, "write")) {
+            int out_val = eval_expr((*t).right);
+            cout << "the next prime value is " << out_val << endl;
+            return t_True;
+        } else if (contains(val, "check")) {
+            int result = eval_relat((*t).left);
+            if (ifDebug) cout << "check result: " << result << endl;
+            return result;
+        } else if (contains(val, "if")) {
+            if (ifDebug) cout << "have a if statement. " << endl;
+            int result = eval_relat((*t).left);
+            if (result == t_True) {
+                exec_list((*t).right);
+            }
+            return t_True;
+        } else if (contains(val, "do")) {
+            int result;
+            do {
+                result = exec_list((*t).left);
+            } while ( result == t_True);
+            return t_True;
+        }
+        execute((*t).left);
+        execute((*t).right);
+    }
+    return t_True;
+}
+
+int myParse::exec_list(treeNode* t) {
+    if (t == nullptr) {
+        return t_False;
+    }
+    treeNode* left = (*t).left;
+    treeNode* right = (*t).right;
+    
+    if (execute(left) != t_False) {
+        exec_list(right);
+        return t_True;
+    } else {
+        return t_False;
+    }
+}
+
+bool myParse::contains(string str, const char* cstr) {
+    string substr (cstr);
+    if (str.find(substr) != string::npos) {
+        return true;
+    }
+    return false;
+}
+
+void myParse::exec_assign(treeNode* t) {
+    treeNode* l_child = (*t).left;
+    treeNode* r_child = (*t).right;
+
+    string val = (*l_child).value;
+    regex pattern (".*\"(.*)\".*");
+    smatch sm;
+    regex_match (val, sm, pattern);
+    string var_id = sm[1];
+    int value = eval_relat(r_child);
+    val_map[var_id] = value;
+    if (ifDebug) cout << "assign: " << var_id << "->" << val_map[var_id] << endl;
+    
+}
+
+int myParse::eval_relat(treeNode* t) {
+    string val = (*t).value;
+    regex pattern (".*[==|\\<\\>|\\<|\\>|\\<=|\\>=].*");
+    smatch sm;
+    if (regex_match (val ,pattern)) {
+        int l_val = eval_expr((*t).left);
+        int r_val = eval_expr((*t).right);
+        if (contains(val, "(")) {
+            val = val.substr(1);
+        }
+        if (ifDebug) cout << "l_val: " << l_val << ", r_val: " << r_val << ", opr: " << val << endl;
+        return cmp_val(val, l_val, r_val);
+    } else {
+        return eval_expr((*t).left);
+    }
+}
+
+int myParse::cmp_val(string opr, int l_val, int r_val) {
+    string sym[] = {"==", "<>", "<", ">", "<=", ">=" };
+    if (opr.compare(sym[0]) == 0) {
+        if (ifDebug) cout << "(l_val == r_val): " << (l_val == r_val)<< endl;
+        return (l_val == r_val) ? t_True : t_False;
+    }
+    if (opr.compare(sym[1]) == 0) {
+        if (ifDebug) cout << "(l_val != r_val): " << (l_val != r_val)<< endl;
+        return (l_val != r_val) ? t_True : t_False;
+    }
+    if (opr.compare(sym[2]) == 0) {
+        if (ifDebug) cout << "(l_val < r_val): " << (l_val < r_val)<< endl;
+        return (l_val < r_val) ? t_True : t_False;
+    }
+    if (opr.compare(sym[3]) == 0) {
+        if (ifDebug) cout << "(l_val > r_val): " << (l_val > r_val)<< endl;
+        return (l_val > r_val) ? t_True : t_False;
+    }
+    if (opr.compare(sym[4]) == 0) {
+        if (ifDebug) cout << "(l_val <= r_val)" << (l_val <= r_val)<< endl;
+        return (l_val <= r_val) ? t_True : t_False;
+    }
+    if (opr.compare(sym[5]) == 0) {
+        if (ifDebug) cout << "(l_val >= r_val)" << (l_val >= r_val)<< endl;
+        return (l_val >= r_val) ? t_True : t_False;
+    }
+    return t_False;
+}
+
+int myParse::eval_expr(treeNode* t) {
+    string val = (*t).value;
+    
+    // cout << "eval_expr : " << val << endl;
+    regex pattern (".*[+|\\-|\\*|/].*");
+    regex pattern2 (".*\"(.*)\".*");
+    if (regex_match (val, pattern)) {
+        int l_val = eval_expr((*t).left);
+        int r_val = eval_expr((*t).right);
+        if (ifDebug) cout << "math: " << l_val << " "
+            << val.at(1) << " " << r_val << " = " <<
+            math_oper(val.at(1), l_val, r_val) << endl;
+        return math_oper(val.at(1), l_val, r_val);
+    } else {
+        smatch sm;
+        regex_match (val, sm, pattern2);
+        string var = sm[1];
+        if (contains(val, "id")) {
+            return val_map[var];
+        } else {
+            return stoi(var);
+        }
+    }
+}
+
+
+int myParse::math_oper(char c, int l_val, int r_val) {
+    switch (c) {
+        case '+': return l_val + r_val;
+        case '-': return l_val - r_val;
+        case '*': return l_val * r_val;
+        case '/': return l_val / r_val;
+        default:
+            break;
+    }
+    return 0;
+}
 /*
  the following code is only to generate the FIRST and FOLLOW sets and PREDICT sets.
  */

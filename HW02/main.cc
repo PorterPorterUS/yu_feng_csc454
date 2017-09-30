@@ -1,19 +1,22 @@
 //
-//  main.cpp
+//  main.cc
 //  myParse
-//
-//  Created by AllenFeng on 9/22/17.
-//  Copyright © 2017 FY. All rights reserved.
 //
 
 #include <iostream>
 #include "scan.h"
 #include "parse.h"
 
+/*
+ launch the program and if input has "d", then
+ it start the "debug" mode, lots of strings will
+ be printed. After the parsing, the program will
+ run the script if the script has no error.
+ */
 
 int main(int argc, const char * argv[]) {
     bool debug = false;
-    if (argc > 1 && *(argv[1]) == 'd') {
+    if (argc > 1) {
         debug = true;
     }
     myParse* parser = new myParse();

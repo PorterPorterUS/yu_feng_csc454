@@ -1,3 +1,14 @@
+/*
+ This the scan function will scan the input and
+ return each token once a time if you initialize
+ the class and call the scan() function.
+ the checkCharAndError is a function that will be
+ called if you run into a error input or the program
+ will count the line and col for every chars.
+ to get present token, simply call get_token_image.
+ 
+ */
+
 #ifndef MYSCAN_H
 #define MYSCAN_H
 

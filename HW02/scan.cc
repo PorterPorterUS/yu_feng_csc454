@@ -1,6 +1,11 @@
 #include "scan.h"
 
-
+/*
+ it will be called for each char. The basic functionality is
+ to count the lines and cols, and if the error is shooted, it
+ will print the current bugged line and its line nums and col
+ indexes.
+ */
 void myScan::ckeckCharAndError(bool msg) {
     static string prev_line;
     if (msg) {
@@ -10,7 +15,6 @@ void myScan::ckeckCharAndError(bool msg) {
         } else {
             cerr << "; please check \"" << curr_line << "\" <- here." << endl;
         }
-        
     } else {
         if (c == '\n') {
             line += 1;
@@ -24,10 +28,16 @@ void myScan::ckeckCharAndError(bool msg) {
     }
 }
 
+/*
+ get the token image from scanner.
+ */
 const string myScan::get_token_image() {
     return token_image;
 }
 
+/*
+ scann the input stream.
+ */
 token myScan::scan() {
     c = ' ';
     token_image.clear();
