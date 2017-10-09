@@ -634,6 +634,7 @@ and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
 let start_program = "
 #include <stdio.h>\n
 #include <stdlib.h>\n
+#include <ctype.h>\n
 \n
 int getint() {\n
     int c, num;\n
@@ -673,62 +674,58 @@ void putint(int n) {\n
 let rec translate (ast:ast_sl)
     :  string * string
     (* warnings  output_program *) = 
-    match ast with
-    | sl -> start_program * ("void main() {\n" ^ (translate_sl sl []) )
-    | _ -> raise (Failure "malformed AST tree in translate")
-
-and translate_sl (ast:ast_sl) (map: string list): string =
+    ("warmings", start_program ^ ("void main() {\n" ^ (translate_sl ast)))
+and translate_sl (ast:ast_sl): string =
     match ast with 
     | [] -> "}\n"
-    | [s; sl] -> (translate_s s map) ^ (translate_sl sl map)
-    | _ -> raise (Failure "malformed AST tree in translate_sl")
+    | s::sl -> (translate_s s) ^ (translate_sl sl)
 
 and translate_s (s:ast_s) : string =
-    match ast_s with
-    | AST_read n -> (translate_read n)
-    | AST_write (e) -> (translate_write e)
-    | AST_assign assign -> (translate_assign assign)
-    | AST_check check -> (translate_check check)
-    | AST_if (if_s)-> (translate_if if_s)
+    match s with
+    | AST_read n -> translate_read n
+    | AST_write (e) -> translate_write e
+    | AST_assign (_, _) -> translate_assign s
+    | AST_check (_) -> translate_check s
+    | AST_if (e,st) -> translate_if s
+    | AST_do sl -> translate_do sl
     | _ -> raise (Failure "malformed AST tree in translate_s")
 
-and translate_assign (assign: ast_s) : string =
+and translate_assign (assign:ast_s) : string =
     match assign with 
-    | (n, e) -> n ^ " = " ^ (translate_expr expr) ^ ";\n"
+    | AST_assign (n, expr) -> n ^ " = " ^ (translate_expr expr) ^ ";\n"
     | _ -> raise (Failure "malformed AST tree in translate_read")
 
-and translate_read (n:AST_read) : string =
+and translate_read (n:string) : string =
     n ^ " = getint();\n"
-and translate_write (expr:AST_e) : string = 
-    "putint(" ^ (translate_expr expr() ^ ");\n"
-and translate_if (if_s:AST_if) : string = 
+and translate_write (expr:ast_e) : string = 
+    "putint(" ^ (translate_expr expr) ^ ");\n"
+and translate_if (if_s:ast_s) : string = 
     match if_s with
-    | (e, sl) -> "if (" ^ (translate_expr e) ^ ") {\n" ^ (translate_sl sl)
+    | AST_if (e, sl) -> "if (" ^ (translate_expr e) ^ ") {\n" ^ (translate_sl sl)
     | _ -> raise (Failure "malformed AST tree in translate_if")
 
 and translate_do (sl:ast_sl) : string = 
-    "{\n" ^ (translate_sl sl)
-and translate_check (check : AST_check) string  = 
+    "while (1){\n" ^ (translate_sl sl)
+and translate_check (check:ast_s) : string  = 
     match check with
-    | AST_binop expr -> "if (" ^ (translate_expr expr) ^ ") break;\n"
-    | _ -> (Failure "malformed AST tree in translate_check")
+    | AST_check (expr) -> "if (!(" ^ (translate_expr expr) ^ ")) break;\n"
+    | _ -> raise (Failure "malformed AST tree in translate_check")
 
-and translate_expr (expr: AST_e) : string =
+and translate_expr (expr:ast_e) : string =
     match expr with 
     | AST_id id -> id 
     | AST_num num -> num
     | AST_binop (op, expr1, expr2) -> (translate_expr expr1) ^ op ^ (translate_expr expr2)
-    | _ -> raise (Failure "malformed AST tree in translate_read")
-
 ;;
 
 
 
 let p = "
     if  a < b  read a fi
+    do check a < b od
     ";;
 
-parse ecg_parse_table p ;;
-
-ast_ize_P (parse ecg_parse_table p);;
+ast_ize_P (parse ecg_parse_table primes_prog) ;;
+snd ( translate ( ast_ize_P (parse ecg_parse_table primes_prog) ) ) ;;
+print_string ( snd ( translate ( ast_ize_P (parse ecg_parse_table primes_prog) ) )) ;;
 
