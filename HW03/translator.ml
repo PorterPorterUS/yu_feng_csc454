@@ -632,32 +632,32 @@ and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
 
 
 let start_program = "
-#include <stdio.h>\n
-#include <stdlib.h>\n
-#include <ctype.h>\n
-\n
-int getint() {\n
-    int c, num;\n
-    num = 0;\n
-\n     
-    while(isspace(c = getchar()));\n
-\n     
-    if (!isdigit(c)) {\n
-        fprintf(stderr, \"This is not a valid character: %c.\\n\", c);\n
-        fprintf(stderr, \"Please enter only a positive integer.\\n\");\n
-        exit(-1);\n
-    }\n
-\n    
-    while(isdigit(c)) {\n
-        num = (num * 10) + (c - '0');\n
-        c = getchar();\n
-    }\n
-    return c;\n
-}\n
-\n
-void putint(int n) {\n
-  printf(\"%d\\n\", n);\n
-}\n
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+int getint() {
+    int c, num;
+    num = 0;
+
+    while(isspace(c = getchar()));
+
+    if (!isdigit(c)) {
+        fprintf(stderr, \"This is not a valid character: %c.\\n\", c);
+        fprintf(stderr, \"Please enter only a positive integer.\\n\");
+        exit(-1);
+    }
+ 
+    while(isdigit(c)) {
+        num = (num * 10) + (c - '0');
+        c = getchar();
+    }
+    return c;
+}
+
+void putint(int n) {
+  printf(\"%d\\n\", n);
+}
 " ;;
 (*******************************************************************
     Translate to C
@@ -670,52 +670,100 @@ void putint(int n) {\n
    indicating their names and the lines on which the writes occur.  Your
    C program should contain code to check for dynamic semantic errors. *)
 
+type val_list = c_val list
+and c_val = (string * bool);;
 
 let rec translate (ast:ast_sl)
-    :  string * string
+    : string * string
     (* warnings  output_program *) = 
-    ("warmings", start_program ^ ("void main() {\n" ^ (translate_sl ast)))
-and translate_sl (ast:ast_sl): string =
+    let vals, warn, output = translate_sl ast [] in
+    (warn, (start_program ^ "void main() {\n" ^ output))
+and translate_sl (ast:ast_sl) (vals:val_list)
+    : val_list * string * string =
     match ast with 
-    | [] -> "}\n"
-    | s::sl -> (translate_s s) ^ (translate_sl sl)
+    | [] -> (vals, "", "}\n")
+    | s::sl -> let vals1, warn1, output1 = translate_s s vals in
+               let vals2, warn2, output2 = translate_sl sl vals1
+              in (vals2, (warn1 ^ warn2), (output1 ^ output2))
 
-and translate_s (s:ast_s) : string =
+and translate_s (s:ast_s) (vals:val_list)
+    : val_list * string * string =
     match s with
-    | AST_read n -> translate_read n
-    | AST_write (e) -> translate_write e
-    | AST_assign (_, _) -> translate_assign s
-    | AST_check (_) -> translate_check s
-    | AST_if (e,st) -> translate_if s
-    | AST_do sl -> translate_do sl
+    | AST_read n -> translate_read n vals 
+    | AST_write (e) -> translate_write e vals
+    | AST_assign (_, _) -> translate_assign s vals
+    | AST_check (_) -> translate_check s vals
+    | AST_if (e,st) -> translate_if s vals
+    | AST_do sl -> translate_do sl vals
     | _ -> raise (Failure "malformed AST tree in translate_s")
 
-and translate_assign (assign:ast_s) : string =
+and translate_assign (assign:ast_s) (vals:val_list) 
+    : val_list * string * string =
     match assign with 
-    | AST_assign (n, expr) -> n ^ " = " ^ (translate_expr expr) ^ ";\n"
+    | AST_assign (n, expr) -> 
+    if (check_list n vals) then 
+      let new_vals, warn, output = translate_expr expr vals in
+        (new_vals, warn, (n ^ " = " ^ output ^ ";\n"))
+    else begin
+      let add_vals = (n, true)::vals in
+      let new_vals, warn, output = translate_expr expr add_vals in
+        (new_vals, warn, ( "int " ^ n ^ " = " ^ output ^ ";\n"))
+      end
     | _ -> raise (Failure "malformed AST tree in translate_read")
 
-and translate_read (n:string) : string =
-    n ^ " = getint();\n"
-and translate_write (expr:ast_e) : string = 
-    "putint(" ^ (translate_expr expr) ^ ");\n"
-and translate_if (if_s:ast_s) : string = 
+and translate_read (n:string) (vals:val_list)
+    : val_list * string * string =
+    if (check_list n vals) = true then 
+      (vals, "", (n ^ " = getint();\n"))
+    else begin
+      let add_vals = (n, true)::vals in
+      (add_vals, "", ( "int " ^ n ^ " = getint();\n"))
+    end
+and translate_write (expr:ast_e) (vals:val_list) 
+    : val_list * string * string = 
+    let new_vals, warn, output = translate_expr expr vals in
+      (new_vals, warn, ("putint( " ^ output ^ " );\n"))
+and translate_if (if_s:ast_s) (vals:val_list)
+    : val_list * string * string =
     match if_s with
-    | AST_if (e, sl) -> "if (" ^ (translate_expr e) ^ ") {\n" ^ (translate_sl sl)
+    | AST_if (e, sl) -> 
+            let vals1, warn1, output1 = translate_expr e vals in 
+            let vals2, warn2, output2 = translate_sl sl vals1 
+            in (vals2, (warn1 ^ warn2), ("if (" ^ output1 ^ ") {\n" ^ output2))
     | _ -> raise (Failure "malformed AST tree in translate_if")
 
-and translate_do (sl:ast_sl) : string = 
-    "while (1){\n" ^ (translate_sl sl)
-and translate_check (check:ast_s) : string  = 
+and translate_do (sl:ast_sl) (vals:val_list) 
+    : val_list * string * string = 
+        let new_vals, warn, output = translate_sl sl vals 
+            in (new_vals, warn, ("while (1){\n" ^ output))
+
+and translate_check (check:ast_s) (vals:val_list) 
+    : val_list * string * string =
     match check with
-    | AST_check (expr) -> "if (!(" ^ (translate_expr expr) ^ ")) break;\n"
+    | AST_check (expr) -> 
+    let new_vals, warn, output = translate_expr expr vals
+          in (new_vals, warn, ("if (!( " ^ output ^ " )) break;\n"))
     | _ -> raise (Failure "malformed AST tree in translate_check")
 
-and translate_expr (expr:ast_e) : string =
+and translate_expr (expr:ast_e) (vals:val_list)
+    : val_list * string * string =
     match expr with 
-    | AST_id id -> id 
-    | AST_num num -> num
-    | AST_binop (op, expr1, expr2) -> (translate_expr expr1) ^ op ^ (translate_expr expr2)
+    | AST_id id -> if check_list id vals then 
+                      (vals, "", id)
+                    else begin
+                      ((id, false)::vals, (id ^ " is  uninitialized.\n"), id)
+                    end
+    | AST_num num -> (vals, "", num)
+    | AST_binop (op, expr1, expr2) -> 
+                    let vals1, warn1, output1 = translate_expr expr1 vals in
+                    let vals2, warn2, output2 = translate_expr expr2 vals1
+                    in (vals2, (warn1 ^ warn2), (output1 ^ op ^ output2))
+
+and check_list (element:string) = function 
+  (a, b)::c -> if (a = element) then 
+                  true 
+              else begin (check_list element c) end
+  | []   -> false;;
 ;;
 
 
@@ -726,6 +774,6 @@ let p = "
     ";;
 
 ast_ize_P (parse ecg_parse_table primes_prog) ;;
-snd ( translate ( ast_ize_P (parse ecg_parse_table primes_prog) ) ) ;;
+ translate ( ast_ize_P (parse ecg_parse_table primes_prog) ) ;;
 print_string ( snd ( translate ( ast_ize_P (parse ecg_parse_table primes_prog) ) )) ;;
 
