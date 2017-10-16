@@ -557,6 +557,15 @@ and ast_e =
 | AST_id of string
 | AST_num of string;;
 
+
+(********************************************************************
+  For this method, I mainly follow the ast_sl and ast_s this two type
+  and parse them step by step, there is not too much innovation in 
+  this part. And if the "ast_izer" can't parse the PT, then it will 
+  raise a error say: 
+      "malformed parse from some where."
+  ********************************************************************
+*)
 let rec ast_ize_P (p:parse_tree) : ast_sl =
   (* your code should replace the following line *)
   match p with 
@@ -630,6 +639,13 @@ and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
   | _ -> raise (Failure "malformed parse tree in ast_ize_expr_tail")
 ;;
 
+(********************************************************************
+  This is just a begining of each output C code.
+  Two simple functions are typed in there:
+  1. getint --- only read positive number with some profixed 
+                whitespace.
+  2. putint --- only can print a integer out.  
+********************************************************************)
 
 let start_program = "
 #include <stdio.h>
@@ -637,28 +653,24 @@ let start_program = "
 #include <ctype.h>
 
 int getint() {
-    int c, num;
-    num = 0;
-
-    while(isspace(c = getchar()));
-
-    if (!isdigit(c)) {
-        fprintf(stderr, \"This is not a valid character: %c.\\n\", c);
+int num, nitems;
+    nitems = scanf(\"%d\", &num);
+    if ((nitems == EOF) || (nitems == 0)) {
+        fprintf(stderr, \"This is not a valid number.\\n\");
         fprintf(stderr, \"Please enter only a positive integer.\\n\");
         exit(-1);
+    } else {
+        return num;
     }
- 
-    while(isdigit(c)) {
-        num = (num * 10) + (c - '0');
-        c = getchar();
-    }
-    return c;
 }
 
 void putint(int n) {
   printf(\"%d\\n\", n);
 }
+
 " ;;
+
+
 (*******************************************************************
     Translate to C
  *******************************************************************)
@@ -670,8 +682,32 @@ void putint(int n) {
    indicating their names and the lines on which the writes occur.  Your
    C program should contain code to check for dynamic semantic errors. *)
 
+
+
+(********************************************************************
+  I made a simple c_val type and this type of list: val_list to store whether
+  a given variable is initialized or not, and whether this variable 
+  needs to add a "int " in front of it. 
+  *******************************************************************
+*)
+
 type val_list = c_val list
 and c_val = (string * bool);;
+
+(********************************************************************
+  This is the major code for translate method, it will call translate_sl
+   method and "translate_sl" will return val_list * string * string
+   a.k.a variable list, warnings and output C code.
+
+  The strategy I used to detect uninitialized variables and those "int "
+  that needs to be added to each variable is using a val_list, and each
+  time, we can check if any AST_id is not in the "val_list", then, that
+  variable is uninitialized, and it will only print this message once 
+  for each variable by adding uninitialized variables into the list 
+  but marked it as "uninitialized". 
+  Last, the main program will print out the warings * output C code.
+  *******************************************************************
+*)
 
 let rec translate (ast:ast_sl)
     : string * string
@@ -751,29 +787,110 @@ and translate_expr (expr:ast_e) (vals:val_list)
     | AST_id id -> if check_list id vals then 
                       (vals, "", id)
                     else begin
-                      ((id, false)::vals, (id ^ " is  uninitialized.\n"), id)
+                      ((id, false)::vals, 
+                        ("\"" ^ id ^ "\"" ^ " is uninitialized.\n"), id)
                     end
-    | AST_num num -> (vals, "", num)
+    | AST_num num ->  if (is_int num) then (vals, "", num) 
+                      else begin 
+                        (vals, "Non-integer number detected.", num)
+                      end
     | AST_binop (op, expr1, expr2) -> 
-                    let vals1, warn1, output1 = translate_expr expr1 vals in
-                    let vals2, warn2, output2 = translate_expr expr2 vals1
-                    in (vals2, (warn1 ^ warn2), (output1 ^ op ^ output2))
+                    if (expr2 = AST_num ("0") && op = "/") then
+                      let vals1, warn1, output1 = translate_expr expr1 vals in
+                      let vals2, warn2, output2 = translate_expr expr2 vals1
+                      in (vals2, (warn1 ^ warn2 ^ 
+                        "One expression: \"" ^ output1 ^ "\" is divide by zero.\n"), 
+                          (output1 ^ " " ^ op ^ " " ^ output2))
+                    else begin
+                      let vals1, warn1, output1 = translate_expr expr1 vals in
+                      let vals2, warn2, output2 = translate_expr expr2 vals1
+                      in (vals2, (warn1 ^ warn2), 
+                          (output1 ^ " " ^ op ^ " " ^ output2))
+                    end
 
 and check_list (element:string) = function 
   (a, b)::c -> if (a = element) then 
                   true 
               else begin (check_list element c) end
-  | []   -> false;;
+  | []   -> false
+
+and is_int (s:string) =
+  try ignore (int_of_string s); true
+  with _ -> false
 ;;
 
-
-
+(* The code listed below are the test case. *)
+(* Test the unexpected read *)
+(* This will only throw a error from the parser. *)
+print_string ("*******************************************************") ;;
 let p = "
+    read
+    ";;
+
+print_string ("********************************************************") ;;
+print_string (" Test the unexpected read. \n Input: \n") ;;
+print_string (p) ;;
+let p_result = translate ( ast_ize_P ( parse ecg_parse_table p ) );;
+(* It will have no output. Just errors.*)
+print_string ("*********************************************************") ;;
+
+(* Test the uninitialized variables *)
+print_string ("*********************************************************") ;;
+let p1 = "
     if  a < b  read a fi
     do check a < b od
     ";;
+let p1_result = translate ( ast_ize_P ( parse ecg_parse_table p1 ) );;
+print_string ("*********************************************************") ;;
+print_string (" Test the uninitialized variables. \n Input: \n") ;;
+print_string (p1) ;;
+print_string ( "warnings: " ) ;;
+print_string (fst (p1_result) ) ;;
+print_string ( "output: " ) ;;
+print_string (snd (p1_result) ) ;;
+print_string ("*********************************************************") ;;
 
-ast_ize_P (parse ecg_parse_table primes_prog) ;;
- translate ( ast_ize_P (parse ecg_parse_table primes_prog) ) ;;
+
+(* Test devided by 0. *)
+(* Also read "a" won't get a warnings! *)
+print_string ("*********************************************************") ;;
+let p2 = "
+    read a
+    b := a / 0
+    ";;
+let p2_result = translate ( ast_ize_P ( parse ecg_parse_table p2 ) );;
+print_string ("*********************************************************") ;;
+print_string (" Test devided by 0. \n Input: \n") ;;
+print_string (p2) ;;
+print_string ( "warnings: " ) ;;
+print_string (fst (p2_result) ) ;;
+print_string ( "output: " ) ;;
+print_string (snd (p2_result) ) ;;
+print_string ("*********************************************************") ;;
+
+
+(* Assigned not-a-integer. *)
+print_string ("*********************************************************") ;;
+let p3 = "
+    read a 
+    b := 1.1
+    ";;
+let p3_result = translate ( ast_ize_P ( parse ecg_parse_table p3 ) );;
+print_string ("********************************************************") ;;
+print_string (" Test not-a-integer input. \n Input: \n") ;;
+print_string (p3) ;;
+print_string ( "warnings: " ) ;;
+print_string (fst (p3_result) ) ;;
+print_string ( "output: " ) ;;
+print_string (snd (p3_result) ) ;;
+print_string ("*********************************************************") ;;
+
+
+print_string ("*********************************************************") ;;
+print_string (" Test the major program for n_prime. \n Input: \n") ;;
+print_string ("*******************************************************") ;;
+translate ( ast_ize_P (parse ecg_parse_table primes_prog) ) ;;
 print_string ( snd ( translate ( ast_ize_P (parse ecg_parse_table primes_prog) ) )) ;;
+
+
 
