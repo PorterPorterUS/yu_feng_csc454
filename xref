@@ -255,28 +255,23 @@ dwarf_output.each { |e|
     lead_cnt = 1
     asse_cnt = 1
     code_cnt = 1
-    lines_set = {}
+    
     while code_cnt < e.min
-        code_text += "[#{code_cnt}, X]\t#{e.codes[code_cnt]}"
+        code_text += "[#{code_cnt}]\t#{e.codes[code_cnt]}"
         code_cnt += 1
     end
-    lead_cnt = lead_cnt < code_cnt ? code_cnt : lead_cnt
     e.assembly_map.keys.sort.each { |addr|
-        curr_cnt = lead_cnt
-        need_write = true
         e.assembly_map[addr].each { |i|
-            if i.class == Integer && need_write then
-                while code_cnt < curr_cnt 
-                    code_text += "[#{code_cnt}, X]\t\n"
+            if i.class == Integer then
+                while code_cnt < lead_cnt - 1
+                    code_text += "[#{code_cnt}]\t\n"
                     code_cnt += 1
                 end
-                code_text += "[#{code_cnt}, #{i}]\t#{e.codes[i]}"
-                need_write = false if lines_set.key?(i)
-                lines_set[i] = true
+                code_text += "[#{code_cnt}]\t#{e.codes[i]}"
                 code_cnt += 1
                 lead_cnt = lead_cnt < code_cnt ? code_cnt : lead_cnt
-            elsif i.class != Integer then
-                while asse_cnt < curr_cnt
+            else
+                while asse_cnt < lead_cnt - 1
                     assembly_text += "[#{asse_cnt}]\t\n"
                     asse_cnt += 1
                 end
@@ -291,6 +286,7 @@ dwarf_output.each { |e|
     print code_text
     puts "***********************************"
 }
+
 
 
 
