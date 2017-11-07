@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+require 'cgi'
 
 class CodeLine 
     attr_accessor :address, :line, :jmp_addr, :func
@@ -248,7 +249,12 @@ dwarf_output.each { |e|
 }
 
 
-
+all_code = []
+all_asse = []
+href = {}
+href_index = 0
+check_line = {}
+check_index = 0
 dwarf_output.each { |e|
     assembly_text = ''
     code_text = ''
@@ -258,7 +264,9 @@ dwarf_output.each { |e|
     lines_set = {}
     while code_cnt < e.min
         code_text += "[#{code_cnt}, X]\t#{e.codes[code_cnt]}"
+        all_code << "[#{code_cnt}, X]\t#{e.codes[code_cnt]}".chop
         code_cnt += 1
+        check_index += 1
     end
     lead_cnt = lead_cnt < code_cnt ? code_cnt : lead_cnt
     e.assembly_map.keys.sort.each { |addr|
@@ -268,30 +276,133 @@ dwarf_output.each { |e|
             if i.class == Integer && need_write then
                 while code_cnt < curr_cnt 
                     code_text += "[#{code_cnt}, X]\t\n"
+                    all_code << "[#{code_cnt}, X]"
                     code_cnt += 1
+                    check_index += 1
                 end
                 code_text += "[#{code_cnt}, #{i}]\t#{e.codes[i]}"
-                need_write = false if lines_set.key?(i)
+                all_code << "[#{code_cnt}, #{i}]\t#{e.codes[i]}".chop
+                if lines_set.key?(i) then
+                    need_write = false 
+                    check_line[check_index] = true
+                end
                 lines_set[i] = true
                 code_cnt += 1
+                check_index += 1
                 lead_cnt = lead_cnt < code_cnt ? code_cnt : lead_cnt
             elsif i.class != Integer then
                 while asse_cnt < curr_cnt
                     assembly_text += "[#{asse_cnt}]\t\n"
+                    all_asse << ""
                     asse_cnt += 1
+                    href_index += 1
                 end
                 assembly_text += "[#{asse_cnt}]\t#{i[0]}"
+                all_asse << "#{i[0]}".chop
+                if (!i[1].nil?) then
+                    href[href_index] = i[1]
+                    href[i[1]] = true
+                end
                 asse_cnt += 1
+                href_index += 1
                 lead_cnt = lead_cnt < asse_cnt ? asse_cnt : lead_cnt
             end
         }
+
     }
+    while code_cnt < lead_cnt 
+        code_text += "[#{code_cnt}, X]\t\n"
+        all_code << "[#{code_cnt}, X]"
+        code_cnt += 1
+        check_index += 1
+    end
+    while asse_cnt < lead_cnt 
+        assembly_text += "[#{asse_cnt}]\t\n"
+        all_asse << ""
+        href_index += 1
+        asse_cnt += 1
+    end
     print assembly_text
     puts "==================================="
     print code_text
     puts "***********************************"
 }
 
+p href
+
+html_text = "<!DOCTYPE html>
+<html>
+<head>
+    <title>CSC 454 HW04</title>
+    <style type=\"text/css\">
+
+        * { 
+            font-family: monospace; 
+            line-height: 1.5em;
+        }
+
+        table {
+            width: 100%;
+        }
+
+        td
+        {
+            padding: 8px;
+            vertical-align: bottom;
+            width: 50%;
+        }
+
+        th
+        {
+            border: 1px solid black;
+        }
+
+        .grey {
+            color: #888
+        }
+
+    </style>
+</head>
+<body>
+    <table>
+"
 
 
+all_code.each_index { |i|
+    html_text += "      <tr>\n"
+    if check_line[i] then
+        html_text += "          <td class=\"grey\">\n"
+    else
+        html_text += "          <td>\n"
+    end
+    html_text += "              " + CGI.escapeHTML(all_code[i]).gsub(/ /, "&nbsp;") + "<br>\n"
+    html_text += "          </td>\n"
+    html_text += "          <td>\n"
 
+    if (all_asse[i].length > 1) then
+        addr = all_asse[i].split(":")[0].strip
+    end
+    if href[addr] then
+        html_text += "          <a name=\""+ addr +"\">\n"
+        html_text += "              " + CGI.escapeHTML(all_asse[i]).gsub(/ /, "&nbsp;") + "<br>\n"
+        html_text += "          </td>\n"
+    elsif !href[i].nil? then 
+        html_text += "          <a href=\"#"+ href[i] +"\">"
+        html_text += "              " + CGI.escapeHTML(all_asse[i]).gsub(/ /, "&nbsp;") + "</a> <br>\n"
+        html_text += "          </td>\n"
+    else 
+        html_text += "              " + CGI.escapeHTML(all_asse[i]).gsub(/ /, "&nbsp;") + "<br>\n"
+        html_text += "          </td>\n"
+    end
+    
+    html_text += "      </tr>\n"
+}
+
+html_text += "
+    </table>
+</body>
+</html>
+"
+
+File.write('./tmp.html', html_text)
+print html_text
