@@ -62,6 +62,94 @@ class FuncAssembly
     end
 end
 
+# This class is to store the information from dwarfdump and cross match 
+# with the assembly code. 
+# :source_map is use to store the information from dwarfdump
+# the map key is [addr] => [line_num, col_num, some_info]
+# :codes is the actual sourse code map by [line_num] => code_text
+# :assembly_map is mapping each aseembly addr with correspoding code_line, 
+# and assembly code.
+# Information stores in assembly map is like 
+# [addr] ==> [line_num1, line_num2, ... , [assembly_code, jmp_addr, func_name]]
+#  rest of attributes are used for easy to index assembly code with sourse code.
+class CodeMap
+    # @lines [lno] => [addr1, addr2, ...]
+    attr_accessor :source_map, :path, :lines, :codes, :assembly_map, :min
+    @max
+    @total_num_lines
+    def initialize(path, addr, lno, col, sig)
+        @min = lno
+        @max = lno
+        @path = path
+        @lines = {}
+        @lines[lno] = []
+        @lines[lno] << addr
+        @source_map = {}
+        @source_map[addr] = [lno, col, sig]
+    end
+    def add_addr(lno, addr)
+        @lines[lno] = [] if @lines[lno].nil?
+        @lines[lno] << addr 
+        @max = lno if (@max < lno)
+        @min = lno if (@min > lno)
+    end
+    # # this will match 
+    # def construct
+    #     tmp = {}
+    #     prev = ''
+    #     (@min..total).each { |i|
+    #         if i > @max then
+    #             tmp[i] = @lines[@max]
+    #         else
+    #             if !lines[i].nil? then
+    #                 tmp[i] = lines[i]
+    #                 prev = lines[i]
+    #             else 
+    #                 tmp[i] = prev
+    #             end
+    #         end
+    #     }
+    #     @lines = tmp
+    # end
+    def read_file
+        @codes = [@path]
+        @total_num_line = File.readlines(@path).size
+        File.open(@path).each { |l|
+            @codes << l
+        }
+    end
+    def match_assembly
+        @assembly_map = {}
+        lines.each { |lno, assems|
+            assems.each { |assem|
+                if @assembly_map[assem].nil? then
+                    @assembly_map[assem] = [lno]
+                else 
+                    @assembly_map[a] << lno
+                end
+            }
+            
+        }
+    end
+    def add_func(total_assembly)
+        addrs = [];
+        assembly_map.each_key { |addr|
+            if !total_assembly[addr].nil? then
+                addrs << addr
+            end
+        }
+        addrs.each { |addr|
+            total_assembly[addr].each { |k, v|
+                if assembly_map[k].nil? then
+                    assembly_map[k] = [v]
+                else
+                    assembly_map[k] << v 
+                end
+            }
+        }
+    end
+end
+
 
 ######################################################################
 #   This sections is to obtains the information from objdump         # 
@@ -97,13 +185,17 @@ ifAdd = false
 
 # start to match the content in objdump
 obj_r.each_line { |l| 
+    # to match head line such as: 00000000004007d0 <main>:
     if objdump_head_match.match(l) then
+        # grep the function head line
         curr =  FuncAssembly.new(Regexp.last_match(1), l)
         objdump_funs << curr;
         ifAdd = true;
+        # stop add sequential lines if meet a blank line.
     elsif objdump_empty_line.match(l) then
         ifAdd = false
     else
+        # match function call but not internal function call e.g. start with "_"
         if ifAdd && objdump_func_call.match(l) then
             curr.assembly << CodeLine.new(Regexp.last_match(1), 
                     l, Regexp.last_match(4), Regexp.last_match(5))
@@ -116,138 +208,25 @@ obj_r.each_line { |l|
             curr.assembly << CodeLine.new(Regexp.last_match(1), l)
         end
     end
-    objdump_funs.clear() if objdump_dummy_head.match(l)
+    # objdump_funs.clear() if objdump_dummy_head.match(l)
 
 }
-
-# After extracted useful information for objdump, build an assembly code 
-# map to map each assembly code by addr.
-# and also find the addr of main function.
-main_func_adrr = ""
-total_assembly = {}
-objdump_funs.each { |e|
-    # debug purpose 
-    e.show_name
-    e.show_lines
-    # actual useful code 
-    main_func_adrr = e.first_addr if e.get_name == "main"
-    total_assembly[e.first_addr] = {}
-    e.assembly.each { |l|
-        total_assembly[e.first_addr][l.address] = [l.line, l.jmp_addr, l.func]
-    }
-}
-
-# dubug purpose
-total_assembly.each { |e|
-    e.each { |l|
-        p l
-    }
-}
-
-
-######################################################################
-#   This sections is to obtains the information from dwarfdump       # 
-######################################################################
-
-# This class is to store the information from dwarfdump and cross match 
-# with the assembly code. 
-# :source_map is use to store the information from dwarfdump
-# the map key is [addr] => [line_num, col_num, some_notes]
-# :codes is the actual sourse code map by [line_num] => code_text
-# :assembly_map is mapping each aseembly addr with correspoding code_line, 
-# and assembly code.
-# Information stores in assembly map is like 
-# [addr] ==> [line_num1, line_num2, ... , [assembly_code, jmp_addr, func_name]]
-#  rest of attributes are used for easy to index assembly code with sourse code.
-class CodeMap
-    attr_accessor :source_map, :path, :lines, :codes, :assembly_map, :min
-    @max
-    def initialize(path, addr, lno, col, sig)
-        @min = lno
-        @max = lno
-        @path = path
-        @lines = {}
-        @lines[lno] = []
-        @lines[lno] << addr
-        @source_map = {}
-        @source_map[addr] = [lno, col, sig]
-    end
-    def add_addr(lno, addr)
-        if @lines[lno].nil? then 
-            @lines[lno] = []
-        end
-        @lines[lno] << addr 
-        @max = @max > lno ? @max : lno
-    end
-    def construct
-        total = File.readlines(@path).size
-        tmp = {}
-        prev = ''
-        (@min..total).each { |i|
-            if i < @min then
-                tmp[i] = @lines[@min]
-            elsif i > @max then
-                tmp[i] = @lines[@max]
-            else
-                if !lines[i].nil? then
-                    tmp[i] = lines[i]
-                    prev = lines[i]
-                else 
-                    tmp[i] = prev
-                end
-            end
-        }
-        @lines = tmp
-    end
-    def read_file
-        @codes = [@path]
-        File.open(@path).each { |l|
-            @codes << l
-        }
-    end
-    def match_assembly
-        @assembly_map = {}
-        lines.each { |k,v|
-            v.each { |a|
-                if @assembly_map[a].nil? then
-                    @assembly_map[a] = [k]
-                else 
-                    @assembly_map[a] << k
-                end
-            }
-            
-        }
-    end
-    def add_func(total_assembly)
-        addrs = [];
-        assembly_map.each_key { |addr|
-            if !total_assembly[addr].nil? then
-                addrs << addr
-            end
-        }
-        addrs.each { |addr|
-            total_assembly[addr].each { |k, v|
-                if assembly_map[k].nil? then
-                    assembly_map[k] = [v]
-                else
-                    assembly_map[k] << v 
-                end
-            }
-        }
-    end
-end
 
 ######################################################################
 #         Actual run dwarfdump and get inforamtions from it          #
 ######################################################################
 
-dwarf_output = []
+dwarf_output = {}
 dwarf_r, dwarf_io = IO.pipe
 fork do
   res = system("~cs254/bin/dwarfdump -l #{myprogram}", out: dwarf_io, err: :out)
 end
 
 dwarf_io.close
+
+######################################################################
+#   This sections is to obtains the information from dwarfdump       # 
+######################################################################
 
 debug_matcher = /^0x00([0-9a-f]{6})\s+\[\s+([0-9]+)\,\s+([0-9]+)\]\s+([A-Z]+.*)$/
 uri_matcher = /^(.*)uri\:[\s]+\"(.+)\".*$/
@@ -256,6 +235,7 @@ curr = nil
 
 dwarf_r.each { |l|
     puts l
+    # match the debug_line in dwarfdump, so that we will start to read info.
     if debug_matcher.match(l) then
         addr = Regexp.last_match(1)
         lno = Regexp.last_match(2).to_i
@@ -264,8 +244,12 @@ dwarf_r.each { |l|
         if (uri_matcher.match(info)) then
             sig = Regexp.last_match(1).strip().split(' ')
             path = Regexp.last_match(2)
-            curr = CodeMap.new(path, addr, lno, col, sig)
-            dwarf_output << curr
+            if dwarf_output[path].nil? then
+                curr = CodeMap.new(path, addr, lno, col, sig)
+                dwarf_output[path] = curr
+            else
+                curr = dwarf_output[path]
+            end
         else 
             sig = info.strip().split(' ')
             curr.add_addr(lno, addr)
@@ -274,15 +258,76 @@ dwarf_r.each { |l|
     end
 }
 
-
-dwarf_output.each { |e|
-    e.construct
-    e.read_file
-    puts e.lines
-    puts e.codes
+puts "######################################################################"
+puts "THIS BELOW IS DWARF_CODE_LINE_DEBUG_INFO"
+puts "######################################################################"
+dwarf_output.each { |path, source|
+    p path
+    source.source_map.each { |pair|
+        p pair
+    }
 }
 
-dwarf_output.each { |e|
+own_code_addr = {}
+lib_path = ".*/include/.*"
+
+dwarf_output.each { |path, source|
+    if !path.match(lib_path) then
+        source.lines.each { |key, lines|
+            lines.sort
+        }
+        source.source_map.each_key { |addr| 
+            own_code_addr[addr] = true
+        }
+        # e.construct
+        source.read_file
+        puts source.lines
+        puts source.codes
+    else 
+        dwarf_output.delete(path)
+    end
+}
+
+# After extracted useful information for objdump, build an assembly code 
+# map to map each assembly code by addr.
+# and also find the addr of main function.
+objdump_funs.each { |func|
+    # actual useful code 
+    objdump_funs.delete(func) if own_code_addr[func.first_addr].nil?
+}
+
+
+puts "######################################################################"
+puts "          THIS BELOW IS ASSEM_EXTRACT_DEBUG_INFO"
+puts "######################################################################"
+main_func_adrr = ""
+total_assembly = {}
+objdump_funs.each { |func|
+    # debug purpose 
+    func.show_name
+    func.show_lines
+    # actual useful code 
+    main_func_adrr = func.first_addr if func.get_name == "main"
+    total_assembly[func.first_addr] = {}
+    func.assembly.each { |l|
+        total_assembly[func.first_addr][l.address] = [l.line, l.jmp_addr, l.func]
+    }
+}
+
+puts "######################################################################"
+puts "                THIS BELOW IS FUNC_ASSEM_DEBUG_INFO"
+puts "######################################################################"
+# dubug purpose
+total_assembly.each { |first_addr, func_assem|
+    p first_addr
+    func_assem.each { |addr_and_info|
+        p addr_and_info
+    }
+}
+puts "######################################################################"
+puts "THIS BELOW IS DWARF_ASSEMBLY_MATCH_DEBUG_INFO"
+puts "######################################################################"
+dwarf_output.each { |k, e|
     e.match_assembly
     e.add_func(total_assembly)
     e.assembly_map.each { |l|
@@ -297,7 +342,7 @@ href = {}
 href_index = 0
 check_line = {}
 check_index = 0
-dwarf_output.each { |e|
+dwarf_output.each { |k, e|
     assembly_text = ''
     code_text = ''
     lead_cnt = 1

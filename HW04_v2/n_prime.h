@@ -6,3 +6,7 @@ int getint() {
     nitems = scanf("%d", &num);
     return num;
 }
+
+void putint(int n) {
+    printf("%d\n", n);
+}
