@@ -63,13 +63,14 @@ end
 #  rest of attributes are used for easy to index assembly code with sourse code.
 class CodeMap
     # @lines [lno] => [addr1, addr2, ...]
-    attr_accessor :source_map, :path, :lines, :codes, :assembly_map, :min
+    attr_accessor :source_map, :path, :lines, :codes, :assembly_map, :min, :fname
     @max
     @total_num_lines
-    def initialize(path, addr, lno, col, sig)
+    def initialize(path, fname, addr, lno, col, sig)
         @min = lno
         @max = lno
         @path = path
+        @fname = fname
         @lines = {}
         @lines[lno] = []
         @lines[lno] << addr
@@ -219,7 +220,8 @@ dwarf_io.close
 debug_matcher = /^0x00([0-9a-f]{6})\s+\[\s+([0-9]+)\,\s+([0-9]+)\]\s+([A-Z]+.*)$/
 # match url
 uri_matcher = /^(.*)uri\:[\s]+\"(.+)\".*$/
-file_name_matcher = //
+# catch the file_name
+file_name_matcher = /^\/(.+\/)*(.+)\.(.+)$/
 
 # dwarf_output key: file_path, value: dwarf_debug_info[]
 dwarf_output = {}
@@ -237,8 +239,12 @@ dwarf_r.each { |l|
         if (uri_matcher.match(info)) then
             sig = Regexp.last_match(1).strip().split(' ')
             path = Regexp.last_match(2)
+            file_name_matcher.match(path)
+            # catch file_name for multi_page_identification 
+            fname = "#{Regexp.last_match(2)}.#{Regexp.last_match(3)}"
+            p fname
             if dwarf_output[path].nil? then
-                curr = CodeMap.new(path, addr, lno, col, sig)
+                curr = CodeMap.new(path, fname, addr, lno, col, sig)
                 dwarf_output[path] = curr
             else
                 curr = dwarf_output[path]
@@ -357,10 +363,10 @@ dwarf_output.each { |path, code_map|
 # that assembly. This is useful to instead of print out all the loop content,
 # I will only print out the loop counter.
 
-all_code = []
-all_asse = []
+all_code = {}
+all_asse = {}
+addr_file_map = {}
 href = {}
-href_index = 0
 check_line = {}
 check_index = 0
 
@@ -372,6 +378,10 @@ dwarf_output.each { |path, code_map|
     # this is used for debug purpose. 
     assembly_text = ''
     code_text = ''
+    # classify each line&assembly with fname
+    all_code[code_map.fname] = []
+    all_asse[code_map.fname] = []
+    href_index = 0
     # the lead_cnt is used to record which line_cnt is larger, so it will 
     # if any assembly_line_cnt is small, it will keep add empty line, same 
     # as source_code_lines. To keep them line-side-by-side-match.
@@ -383,12 +393,13 @@ dwarf_output.each { |path, code_map|
     # any assembly code, I will just print them ahead.
     while code_cnt < code_map.min
         code_text += "[#{code_cnt}, X]\t#{code_map.codes[code_cnt]}"
-        all_code << "[#{code_cnt}, X]\t#{code_map.codes[code_cnt]}".chop
+        all_code[code_map.fname] << "[#{code_cnt}, X]\t#{code_map.codes[code_cnt]}".chop
         code_cnt += 1
         check_index += 1
     end
     lead_cnt = lead_cnt < code_cnt ? code_cnt : lead_cnt
     code_map.assembly_map.keys.sort.each { |addr|
+        addr_file_map[addr] = code_map.fname
         curr_cnt = lead_cnt
         need_write = true
         code_map.assembly_map[addr].each { |i|
@@ -398,13 +409,13 @@ dwarf_output.each { |path, code_map|
                 # first, keep line_num match. fill with empty lines.
                 while code_cnt < curr_cnt 
                     code_text += "[#{code_cnt}, X]\t\n"
-                    all_code << "[#{code_cnt}, X]"
+                    all_code[code_map.fname] << "[#{code_cnt}, X]"
                     code_cnt += 1
                     check_index += 1
                 end
                 # add corresponding line.
                 code_text += "[#{code_cnt}, #{i}]\t#{code_map.codes[i]}"
-                all_code << "[#{code_cnt}, #{i}]\t#{code_map.codes[i]}".chop
+                all_code[code_map.fname] << "[#{code_cnt}, #{i}]\t#{code_map.codes[i]}".chop
                 # if this line is written before, the next line in this 
                 # address don't need to write again.
                 # I just need a loop counter line.
@@ -422,15 +433,15 @@ dwarf_output.each { |path, code_map|
                 # fill with empty lines to match the code_line_num.
                 while asse_cnt < curr_cnt
                     assembly_text += "[#{asse_cnt}]\t\n"
-                    all_asse << ""
+                    all_asse[code_map.fname] << ""
                     asse_cnt += 1
                     href_index += 1
                 end
                 # add coresponding line
                 assembly_text += "[#{asse_cnt}]\t#{i[0]}"
-                all_asse << "#{i[0]}".chop
+                all_asse[code_map.fname] << "#{i[0]}".chop
                 if (!i[1].nil?) then
-                    href[href_index] = i[1]
+                    href["#{code_map.fname}, #{href_index}"] = i[1]
                     href[i[1]] = true
                 end
                 # set the lead_cnt to the larger one between code and assembly.
@@ -443,13 +454,13 @@ dwarf_output.each { |path, code_map|
     # fill with empty line to match the end file.
     while code_cnt < lead_cnt 
         code_text += "[#{code_cnt}, X]\t\n"
-        all_code << "[#{code_cnt}, X]"
+        all_code[code_map.fname] << "[#{code_cnt}, X]"
         code_cnt += 1
         check_index += 1
     end
     while asse_cnt < lead_cnt 
         assembly_text += "[#{asse_cnt}]\t\n"
-        all_asse << ""
+        all_asse[code_map.fname] << ""
         href_index += 1
         asse_cnt += 1
     end
@@ -460,8 +471,12 @@ dwarf_output.each { |path, code_map|
 }
 
 p href
-
+p [all_code.keys, all_asse.keys]
+p [all_code.values, all_asse.values]
 # The rest of code is just make HTML text and write into a file.
+
+all_code.each { |fname, content|
+
 html_text = "<!DOCTYPE html>
 <html>
 <head>
@@ -498,45 +513,48 @@ html_text = "<!DOCTYPE html>
 <body>
     <table>
 "
-
-
-all_code.each_index { |i|
-    html_text += "      <tr>\n"
-    if check_line[i] then
-        html_text += "          <td class=\"grey\">\n"
-    else
+    content.each_index { |i|
+        html_text += "      <tr>\n"
+        if check_line[i] then
+            html_text += "          <td class=\"grey\">\n"
+        else
+            html_text += "          <td>\n"
+        end
+        html_text += "              " + CGI.escapeHTML(all_code[fname][i]).gsub(/ /, "&nbsp;") + "<br>\n"
+        html_text += "          </td>\n"
         html_text += "          <td>\n"
-    end
-    html_text += "              " + CGI.escapeHTML(all_code[i]).gsub(/ /, "&nbsp;") + "<br>\n"
-    html_text += "          </td>\n"
-    html_text += "          <td>\n"
-
-    if (all_asse[i].length > 1) then
-        addr = all_asse[i].split(":")[0].strip
-    end
-    if href[addr] || addr == main_func_adrr then
-        html_text += "          <a name=\""+ addr +"\">\n"
-        html_text += "              " + CGI.escapeHTML(all_asse[i]).gsub(/ /, "&nbsp;") + "<br>\n"
-        html_text += "          </td>\n"
-    elsif !href[i].nil? then 
-        html_text += "          <a href=\"#"+ href[i] +"\">"
-        html_text += "              " + CGI.escapeHTML(all_asse[i]).gsub(/ /, "&nbsp;") + "</a> <br>\n"
-        html_text += "          </td>\n"
-    else 
-        html_text += "              " + CGI.escapeHTML(all_asse[i]).gsub(/ /, "&nbsp;") + "<br>\n"
-        html_text += "          </td>\n"
-    end
-    
-    html_text += "      </tr>\n"
-}
+        addr = ""
+        if (all_asse[fname][i].length > 1) then
+            addr = all_asse[fname][i].split(":")[0].strip
+        end
+        href_index = "#{fname}, #{i}"
+        if href[addr] || addr == main_func_adrr then
+            html_text += "          <a name=\""+ addr +"\">\n"
+            html_text += "              " + CGI.escapeHTML(all_asse[fname][i]).gsub(/ /, "&nbsp;") + "<br>\n"
+            html_text += "          </td>\n"
+        elsif !href[href_index].nil? then
+            html_text += "          <a href=\"./#{addr_file_map[href[href_index]]}.html##{href[href_index]}\">"
+            html_text += "              " + CGI.escapeHTML(all_asse[fname][i]).gsub(/ /, "&nbsp;") + "</a> <br>\n"
+            html_text += "          </td>\n"
+        else 
+            html_text += "              " + CGI.escapeHTML(all_asse[fname][i]).gsub(/ /, "&nbsp;") + "<br>\n"
+            html_text += "          </td>\n"
+        end
+        
+        html_text += "      </tr>\n"
+    }
 
 html_text += "
     </table>
 </body>
 </html>
 "
+    File.write("./#{fname}.html", html_text)
+}
 
-File.write('./main.html', html_text)
+
+
+
 
 html_index = "<!DOCTYPE html>
 <html>
