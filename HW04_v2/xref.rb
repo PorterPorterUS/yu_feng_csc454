@@ -27,28 +27,17 @@ class FuncAssembly
     @first_line
     @name
     attr_accessor :assembly, :first_addr
-    @subroutine
     def initialize(name, line)
         @name = name
         @assembly = Array.new
         @first_line = line;
         @first_addr = line.split(' ')[0][10..16]
-        @subroutine = [];
-    end
-    def add_subroutine(addr, func=nil) 
-        @subroutine << [addr, func]
     end
     def show_name
         puts @name
     end
     def get_name
         @name
-    end
-    def show_subroutine
-        puts @subroutine
-    end
-    def get_subroutine
-        @subroutine
     end
     def show_lines
         @assembly.each { |code|
@@ -93,31 +82,34 @@ class CodeMap
         @max = lno if (@max < lno)
         @min = lno if (@min > lno)
     end
-    # # this will match 
-    # def construct
-    #     tmp = {}
-    #     prev = ''
-    #     (@min..total).each { |i|
-    #         if i > @max then
-    #             tmp[i] = @lines[@max]
-    #         else
-    #             if !lines[i].nil? then
-    #                 tmp[i] = lines[i]
-    #                 prev = lines[i]
-    #             else 
-    #                 tmp[i] = prev
-    #             end
-    #         end
-    #     }
-    #     @lines = tmp
-    # end
+    # this function is used to include all the code that not index to a specific 
+    # assembly code, I will just include them into previous assembly code.
+    def construct
+        @total_num_lines = File.readlines(@path).size
+        tmp = {}
+        prev = ''
+        (@min..@total_num_lines).each { |i|
+            if i > @max then
+                tmp[i] = @lines[@max]
+            else
+                if !lines[i].nil? then
+                    tmp[i] = lines[i]
+                    prev = lines[i]
+                else 
+                    tmp[i] = prev
+                end
+            end
+        }
+        @lines = tmp
+    end
+    # function for read lines in file
     def read_file
         @codes = [@path]
-        @total_num_line = File.readlines(@path).size
         File.open(@path).each { |l|
             @codes << l
         }
     end
+    # we want assembly-centric, so to convert line-index to assembly-index.
     def match_assembly
         @assembly_map = {}
         lines.each { |lno, assems|
@@ -125,12 +117,13 @@ class CodeMap
                 if @assembly_map[assem].nil? then
                     @assembly_map[assem] = [lno]
                 else 
-                    @assembly_map[a] << lno
+                    @assembly_map[assem] << lno
                 end
             }
             
         }
     end
+    # for each assembly address, add the assembly content for generate html.
     def add_func(total_assembly)
         addrs = [];
         assembly_map.each_key { |addr|
@@ -152,9 +145,8 @@ end
 
 
 ######################################################################
-#   This sections is to obtains the information from objdump         # 
+#            This sections is to run objdump from kernel             # 
 ######################################################################
-
 # read lines from objdump
 obj_r, obj_io = IO.pipe
 fork do
@@ -173,10 +165,10 @@ objdump_func_call  = /[\s]+([0-9a-f]{6})\:[\s]+([0-9a-f]{2}\s){5}(\s|callq)*([0-
 objdump_loc_jump = /[\s]+([0-9a-f]{6})\:[\s]+([0-9a-f]{2}\s){2,}[\s]*j[a-z]*\s*([0-9a-f]{6}).*\<(\p{Alnum}+?\S+)\>.*\n/
 # match regular assembly code
 objdump_asse_code  = /[\s]+([0-9a-f]{6})\:[\s]+([0-9a-f]{2}\s)+.*/
-# match <dummy_head>, so it will start to store the information of 
-# program, not stdlib.
-objdump_dummy_head = /[0-9a-f]{16}.*\<frame_dummy\>:/
 
+######################################################################
+#   This sections is to obtains the information from objdump         # 
+######################################################################
 
 # store the FuncAssembly class
 objdump_funs = []
@@ -199,24 +191,19 @@ obj_r.each_line { |l|
         if ifAdd && objdump_func_call.match(l) then
             curr.assembly << CodeLine.new(Regexp.last_match(1), 
                     l, Regexp.last_match(4), Regexp.last_match(5))
-            curr.add_subroutine(Regexp.last_match(4), Regexp.last_match(5))
         elsif ifAdd && objdump_loc_jump.match(l) && ifAdd then 
             curr.assembly << CodeLine.new(Regexp.last_match(1), 
                                     l, Regexp.last_match(3))
-            curr.add_subroutine(Regexp.last_match(3))
         elsif ifAdd && objdump_asse_code.match(l) then
             curr.assembly << CodeLine.new(Regexp.last_match(1), l)
         end
     end
-    # objdump_funs.clear() if objdump_dummy_head.match(l)
-
 }
 
 ######################################################################
 #         Actual run dwarfdump and get inforamtions from it          #
 ######################################################################
 
-dwarf_output = {}
 dwarf_r, dwarf_io = IO.pipe
 fork do
   res = system("~cs254/bin/dwarfdump -l #{myprogram}", out: dwarf_io, err: :out)
@@ -228,14 +215,19 @@ dwarf_io.close
 #   This sections is to obtains the information from dwarfdump       # 
 ######################################################################
 
+# match dwarfdump debuger line
 debug_matcher = /^0x00([0-9a-f]{6})\s+\[\s+([0-9]+)\,\s+([0-9]+)\]\s+([A-Z]+.*)$/
+# match url
 uri_matcher = /^(.*)uri\:[\s]+\"(.+)\".*$/
 
+# dwarf_output key: file_path, value: dwarf_debug_info[]
+dwarf_output = {}
 curr = nil
-
 dwarf_r.each { |l|
-    puts l
+    # for debug purpose.
+    # puts l
     # match the debug_line in dwarfdump, so that we will start to read info.
+    # match [addr, line_num, col_num, extra_info];
     if debug_matcher.match(l) then
         addr = Regexp.last_match(1)
         lno = Regexp.last_match(2).to_i
@@ -252,7 +244,9 @@ dwarf_r.each { |l|
             end
         else 
             sig = info.strip().split(' ')
+            # add addr to lines[lno] => [addrs]
             curr.add_addr(lno, addr)
+            # addr cross map lno.
             curr.source_map[addr] = [lno, col, sig]
         end
     end
@@ -261,6 +255,7 @@ dwarf_r.each { |l|
 puts "######################################################################"
 puts "THIS BELOW IS DWARF_CODE_LINE_DEBUG_INFO"
 puts "######################################################################"
+
 dwarf_output.each { |path, source|
     p path
     source.source_map.each { |pair|
@@ -268,18 +263,19 @@ dwarf_output.each { |path, source|
     }
 }
 
+# delete the path to public stdlib.
 own_code_addr = {}
 lib_path = ".*/include/.*"
 
 dwarf_output.each { |path, source|
     if !path.match(lib_path) then
+        source.construct
         source.lines.each { |key, lines|
             lines.sort
         }
         source.source_map.each_key { |addr| 
             own_code_addr[addr] = true
         }
-        # e.construct
         source.read_file
         puts source.lines
         puts source.codes
@@ -292,7 +288,7 @@ dwarf_output.each { |path, source|
 # map to map each assembly code by addr.
 # and also find the addr of main function.
 objdump_funs.each { |func|
-    # actual useful code 
+    # actual useful function assembly code 
     objdump_funs.delete(func) if own_code_addr[func.first_addr].nil?
 }
 
@@ -324,17 +320,27 @@ total_assembly.each { |first_addr, func_assem|
         p addr_and_info
     }
 }
+
 puts "######################################################################"
 puts "THIS BELOW IS DWARF_ASSEMBLY_MATCH_DEBUG_INFO"
 puts "######################################################################"
-dwarf_output.each { |k, e|
-    e.match_assembly
-    e.add_func(total_assembly)
-    e.assembly_map.each { |l|
-        p l
+
+dwarf_output.each { |path, code_map|
+    code_map.match_assembly
+    code_map.add_func(total_assembly)
+    code_map.assembly_map.each { |info|
+        p info
     }
 }
 
+# This code below is generate HTML
+# all_code is a list to generate the code-side;
+# all_asse is a list to generate the assembly-side;
+# href is for link-reference. Here, I used the assembly-address as link-name.
+# check_line is served as a hashSet to check if this line is record previously,
+# then, I will only add the first line instead of all the lines co-index with 
+# that assembly. This is useful to instead of print out all the loop content,
+# I will only print out the loop counter.
 
 all_code = []
 all_asse = []
@@ -342,61 +348,84 @@ href = {}
 href_index = 0
 check_line = {}
 check_index = 0
-dwarf_output.each { |k, e|
+
+# Dwar_output is a filePath-index map.
+# so it will mapping though all the code files.
+dwarf_output.each { |path, code_map|
+    # assembly text and code_text are just the addtional text to print out 
+    # related assembly-lines and code_lines for each file with line number,
+    # this is used for debug purpose. 
     assembly_text = ''
     code_text = ''
+    # the lead_cnt is used to record which line_cnt is larger, so it will 
+    # if any assembly_line_cnt is small, it will keep add empty line, same 
+    # as source_code_lines. To keep them line-side-by-side-match.
     lead_cnt = 1
     asse_cnt = 1
     code_cnt = 1
     lines_set = {}
-    while code_cnt < e.min
-        code_text += "[#{code_cnt}, X]\t#{e.codes[code_cnt]}"
-        all_code << "[#{code_cnt}, X]\t#{e.codes[code_cnt]}".chop
+    # if there is any addtional source codes at beginning are not related to
+    # any assembly code, I will just print them ahead.
+    while code_cnt < code_map.min
+        code_text += "[#{code_cnt}, X]\t#{code_map.codes[code_cnt]}"
+        all_code << "[#{code_cnt}, X]\t#{code_map.codes[code_cnt]}".chop
         code_cnt += 1
         check_index += 1
     end
     lead_cnt = lead_cnt < code_cnt ? code_cnt : lead_cnt
-    e.assembly_map.keys.sort.each { |addr|
+    code_map.assembly_map.keys.sort.each { |addr|
         curr_cnt = lead_cnt
         need_write = true
-        e.assembly_map[addr].each { |i|
+        code_map.assembly_map[addr].each { |i|
+            # If the elemenet is integer, which means it is line_number, 
+            # so keep adding lines into all_code list.
             if i.class == Integer && need_write then
+                # first, keep line_num match. fill with empty lines.
                 while code_cnt < curr_cnt 
                     code_text += "[#{code_cnt}, X]\t\n"
                     all_code << "[#{code_cnt}, X]"
                     code_cnt += 1
                     check_index += 1
                 end
-                code_text += "[#{code_cnt}, #{i}]\t#{e.codes[i]}"
-                all_code << "[#{code_cnt}, #{i}]\t#{e.codes[i]}".chop
+                # add corresponding line.
+                code_text += "[#{code_cnt}, #{i}]\t#{code_map.codes[i]}"
+                all_code << "[#{code_cnt}, #{i}]\t#{code_map.codes[i]}".chop
+                # if this line is written before, the next line in this 
+                # address don't need to write again.
+                # I just need a loop counter line.
                 if lines_set.key?(i) then
                     need_write = false 
                     check_line[check_index] = true
                 end
+                # set the lead_cnt to the larger one between code and assembly.
                 lines_set[i] = true
                 code_cnt += 1
                 check_index += 1
                 lead_cnt = lead_cnt < code_cnt ? code_cnt : lead_cnt
+            # this means this element is content with assembly.
             elsif i.class != Integer then
+                # fill with empty lines to match the code_line_num.
                 while asse_cnt < curr_cnt
                     assembly_text += "[#{asse_cnt}]\t\n"
                     all_asse << ""
                     asse_cnt += 1
                     href_index += 1
                 end
+                # add coresponding line
                 assembly_text += "[#{asse_cnt}]\t#{i[0]}"
                 all_asse << "#{i[0]}".chop
                 if (!i[1].nil?) then
                     href[href_index] = i[1]
                     href[i[1]] = true
                 end
+                # set the lead_cnt to the larger one between code and assembly.
                 asse_cnt += 1
                 href_index += 1
                 lead_cnt = lead_cnt < asse_cnt ? asse_cnt : lead_cnt
             end
         }
-
     }
+    # fill with empty line to match the end file.
     while code_cnt < lead_cnt 
         code_text += "[#{code_cnt}, X]\t\n"
         all_code << "[#{code_cnt}, X]"
@@ -417,6 +446,7 @@ dwarf_output.each { |k, e|
 
 p href
 
+# The rest of code is just make HTML text and write into a file.
 html_text = "<!DOCTYPE html>
 <html>
 <head>
