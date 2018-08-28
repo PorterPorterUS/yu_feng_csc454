@@ -1,0 +1,660 @@
+1
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.015 seconds
+1
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.024 seconds
+1
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.086 seconds
+1
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.414 seconds
+1
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 3.950 seconds
+1
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 64.633 seconds
+2
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.012 seconds
+2
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.025 seconds
+2
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.087 seconds
+2
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.376 seconds
+2
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.939 seconds
+2
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 48.505 seconds
+3
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.016 seconds
+3
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.033 seconds
+3
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.105 seconds
+3
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.474 seconds
+3
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.652 seconds
+3
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 66.502 seconds
+4
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.018 seconds
+4
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.034 seconds
+4
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.137 seconds
+4
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.539 seconds
+4
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.837 seconds
+4
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 68.632 seconds
+6
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.025 seconds
+6
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.036 seconds
+6
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.131 seconds
+6
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.512 seconds
+6
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.659 seconds
+6
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 35.361 seconds
+8
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.025 seconds
+8
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.041 seconds
+8
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.146 seconds
+8
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.574 seconds
+8
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.245 seconds
+8
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 32.137 seconds
+12
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.048 seconds
+12
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.073 seconds
+12
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.131 seconds
+12
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.651 seconds
+12
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.348 seconds
+12
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 75.710 seconds
+16
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.062 seconds
+16
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.106 seconds
+16
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.292 seconds
+16
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.776 seconds
+16
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 3.297 seconds
+16
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 31.015 seconds
+24
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.084 seconds
+24
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.161 seconds
+24
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.346 seconds
+24
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 1.028 seconds
+24
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 3.515 seconds
+24
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 31.926 seconds
+32
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.110 seconds
+32
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.205 seconds
+32
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.445 seconds
+32
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 1.369 seconds
+32
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 4.408 seconds
+32
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 33.209 seconds
+48
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.156 seconds
+48
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.287 seconds
+48
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.631 seconds
+48
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 1.781 seconds
+48
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 4.929 seconds
+48
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 34.660 seconds
+1
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.013 seconds
+1
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.025 seconds
+1
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.088 seconds
+1
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.394 seconds
+1
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 4.064 seconds
+1
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 70.127 seconds
+2
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.012 seconds
+2
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.032 seconds
+2
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.091 seconds
+2
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.549 seconds
+2
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 3.211 seconds
+2
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 54.413 seconds
+3
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.016 seconds
+3
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.028 seconds
+3
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.135 seconds
+3
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.432 seconds
+3
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.638 seconds
+3
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 42.740 seconds
+4
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.016 seconds
+4
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.033 seconds
+4
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.138 seconds
+4
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.517 seconds
+4
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.436 seconds
+4
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 38.067 seconds
+6
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.023 seconds
+6
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.036 seconds
+6
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.138 seconds
+6
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.503 seconds
+6
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.326 seconds
+6
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 67.674 seconds
+8
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.035 seconds
+8
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.049 seconds
+8
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.135 seconds
+8
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.538 seconds
+8
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.341 seconds
+8
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 64.063 seconds
+12
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.037 seconds
+12
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.078 seconds
+12
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.216 seconds
+12
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.708 seconds
+12
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.313 seconds
+12
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 32.984 seconds
+16
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.057 seconds
+16
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.111 seconds
+16
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.240 seconds
+16
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.817 seconds
+16
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 2.738 seconds
+16
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 31.173 seconds
+24
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.091 seconds
+24
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.155 seconds
+24
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.343 seconds
+24
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 1.045 seconds
+24
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 3.588 seconds
+24
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 34.464 seconds
+32
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.097 seconds
+32
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.202 seconds
+32
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.447 seconds
+32
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 1.364 seconds
+32
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 4.750 seconds
+32
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 31.572 seconds
+48
+100
+100 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.178 seconds
+48
+1000
+1000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.299 seconds
+48
+10000
+10000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 0.595 seconds
+48
+100000
+100000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 1.534 seconds
+48
+1000000
+1000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 5.320 seconds
+48
+10000000
+10000000 vertices, seed 0
+START MULTI_THRED
+elapsed time: 69.041 seconds
